@@ -25,12 +25,12 @@ func reset_quadrant():
 	init_quadrant()
 
 
-func carve(clipping_polygon):
+func carve(clipping_polygon: PoolVector2Array):
 	"""
 	Carves `clipping_polygon` away from the quadrant
 	"""
 	for colpol in static_body.get_children():
-		var clipped_polygons = Geometry.clip_polygons_2d(colpol.polygon, clipping_polygon)
+		var clipped_polygons = _clip_without_hole(colpol.polygon, clipping_polygon)
 		var n_clipped_polygons = len(clipped_polygons)
 		match n_clipped_polygons:
 			0:
@@ -39,25 +39,8 @@ func carve(clipping_polygon):
 			1:
 				# Clipping produces only one polygon
 				colpol.update_pol(clipped_polygons[0])
-			2:
-				# Check if you carved a hole (one of the two polygons
-				# is clockwise). If so, split the polygon in two that
-				# together make a "hollow" collision shape
-				if _is_hole(clipped_polygons):
-					# split and add
-					for p in _clip_without_hole(colpol.polygon, clipping_polygon):
-						var new_colpol = _new_colpol(p)
-						static_body.add_child(new_colpol)
-					colpol.free()
-				# if its not a hole, behave as in match _
-				else:
-					colpol.update_pol(clipped_polygons[0])
-					for i in range(n_clipped_polygons-1):
-						static_body.add_child(_new_colpol(clipped_polygons[i+1]))
-			
-			# if more than two polygons, simply add all of
-			# them to the quadrant
 			_:
+				# if more polygons, simply add all of them to the quadrant
 				colpol.update_pol(clipped_polygons[0])
 				for i in range(n_clipped_polygons-1):
 					static_body.add_child(_new_colpol(clipped_polygons[i+1]))
@@ -74,8 +57,11 @@ func _clip_without_hole(polygon: Array, clip_polygon: Array):
 	"""
 	Returns two polygons produced by vertically
 	splitting polygon in half and removing clip_polygon.
-	Assumes that "just clipping" would've created a hole.
 	"""
+	var clipped_polygons = Geometry.clip_polygons_2d(polygon, clip_polygon)
+	if not (len(clipped_polygons) == 2 and _is_hole(clipped_polygons)):
+		# no hole was created
+		return clipped_polygons
 	# split the quadrant at the polygons position avoids creating a hole
 	var avg_x = _avg_position(clip_polygon).x
 	var subquadrants = _split_quadrant(avg_x)
