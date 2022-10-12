@@ -27,7 +27,7 @@ func reset_quadrant():
 
 func carve(clipping_polygon):
 	"""
-	Carves the clipping_polygon away from the quadrant
+	Carves `clipping_polygon` away from the quadrant
 	"""
 	for colpol in static_body.get_children():
 		var clipped_polygons = Geometry.clip_polygons_2d(colpol.polygon, clipping_polygon)
@@ -45,10 +45,8 @@ func carve(clipping_polygon):
 				# together make a "hollow" collision shape
 				if _is_hole(clipped_polygons):
 					# split and add
-					for p in _split_polygon(clipping_polygon):
-						var new_colpol = _new_colpol(
-							Geometry.intersect_polygons_2d(p, colpol.polygon)[0]
-							)
+					for p in _clip_without_hole(colpol.polygon, clipping_polygon):
+						var new_colpol = _new_colpol(p)
 						static_body.add_child(new_colpol)
 					colpol.free()
 				# if its not a hole, behave as in match _
@@ -67,26 +65,39 @@ func carve(clipping_polygon):
 
 func add(_adding_polygon):
 	"""
-	TODO
+	Adds the intersecting parts of `adding_polygon` to the quadrant
 	"""
 	pass
 
 
-func _split_polygon(clip_polygon: Array):
+func _clip_without_hole(polygon: Array, clip_polygon: Array):
 	"""
 	Returns two polygons produced by vertically
-	splitting split_polygon in half
+	splitting polygon in half and removing clip_polygon.
+	Assumes that "just clipping" would've created a hole.
 	"""
+	# split the quadrant at the polygons position avoids creating a hole
 	var avg_x = _avg_position(clip_polygon).x
+	var subquadrants = _split_quadrant(avg_x)
+	var left_quadrant_clipped = Geometry.clip_polygons_2d(subquadrants[0], clip_polygon)[0]
+	var right_quadrant_clipped = Geometry.clip_polygons_2d(subquadrants[1], clip_polygon)[0]
+	var left_polygon_clipped = Geometry.intersect_polygons_2d(left_quadrant_clipped, polygon)[0]
+	var right_polygon_clipped = Geometry.intersect_polygons_2d(right_quadrant_clipped, polygon)[0]
+	return [left_polygon_clipped, right_polygon_clipped]
+
+
+func _split_quadrant(split_x: int):
+	"""
+	Returns a list of polygons as a result of
+	splitting default_quadrant_polygon vertically at split_x
+	"""
 	var left_subquadrant = default_quadrant_polygon.duplicate()
-	left_subquadrant[1] = Vector2(avg_x, left_subquadrant[1].y)
-	left_subquadrant[2] = Vector2(avg_x, left_subquadrant[2].y)
+	left_subquadrant[1] = Vector2(split_x, left_subquadrant[1].y)
+	left_subquadrant[2] = Vector2(split_x, left_subquadrant[2].y)
 	var right_subquadrant = default_quadrant_polygon.duplicate()
-	right_subquadrant[0] = Vector2(avg_x, right_subquadrant[0].y)
-	right_subquadrant[3] = Vector2(avg_x, right_subquadrant[3].y)
-	var pol1 = Geometry.clip_polygons_2d(left_subquadrant, clip_polygon)[0]
-	var pol2 = Geometry.clip_polygons_2d(right_subquadrant, clip_polygon)[0]
-	return [pol1, pol2]
+	right_subquadrant[0] = Vector2(split_x, right_subquadrant[0].y)
+	right_subquadrant[3] = Vector2(split_x, right_subquadrant[3].y)
+	return [left_subquadrant, right_subquadrant]
 
 
 func _is_hole(clipped_polygons):
