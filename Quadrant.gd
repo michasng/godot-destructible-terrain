@@ -58,26 +58,44 @@ func add(adding_polygon: PoolVector2Array):
 		# adding_polygon must be completely enclosed by the quadrant
 		intersected_adding_polygons = [adding_polygon]
 
-	# remove any existing polygons from the new one
-	for colpol in static_body.get_children():
-		# avoid changing intersected_adding_polygons during iteration
-		var new_intersected_adding_polygons = []
-		for intersected_adding_polygon in intersected_adding_polygons:
-			var clip_results = Geometry.clip_polygons_2d(intersected_adding_polygon, colpol.polygon)
-			if _is_hole(clip_results):
-				# the colpol must be contained in the adding_polygon
-				# clear the colpol and ignore the hole
-				colpol.queue_free()
-				for clip_result in clip_results:
-					if not Geometry.is_polygon_clockwise(clip_result):
-						new_intersected_adding_polygons.append(clip_result)
-				break
-			if len(clip_results) > 0:
-				new_intersected_adding_polygons.append_array(clip_results)
-		intersected_adding_polygons = new_intersected_adding_polygons
+	var polygons = []
+	for child in static_body.get_children():
+		polygons.append(child.polygon)
+	polygons.append_array(intersected_adding_polygons)
+	polygons = _merge_polygons(polygons)
+	_assign_polygons(polygons)
+
+
+func _assign_polygons(polygons: Array):
+	for child in static_body.get_children():
+		child.queue_free()
+	for polygon in polygons:
+		static_body.add_child(_new_colpol(polygon))
+
+
+func _merge_polygons(polygons_to_merge: Array) -> Array:
+	"""
+	Returns a list of merged polygons without holes.
+	This is a heuristic, that may not always merge all polygons in an ideal way.
+	"""
+	# nothing to merge for 0 or 1 item(s)
+	if len(polygons_to_merge) < 2:
+		return polygons_to_merge
 	
-	for intersected_adding_polygon in intersected_adding_polygons:
-		static_body.add_child(_new_colpol(intersected_adding_polygon))
+	var merged_polygons = [polygons_to_merge.front()]
+	# iterate over all subsequent items (start and end are both inclusive)
+	for polygon_to_merge in polygons_to_merge.slice(1, len(polygons_to_merge) - 1):
+		# don't modify Array during iteration
+		var modified_merged_polygons = []
+		for merged_polygon in merged_polygons:
+			var new_merged_polygons = Geometry.merge_polygons_2d(polygon_to_merge, merged_polygon)
+			if len(modified_merged_polygons) > 1:
+				# these two cannot be merged, or one contains the other
+				modified_merged_polygons.append(merged_polygon)
+			else:
+				modified_merged_polygons.append_array(new_merged_polygons)
+		merged_polygons = modified_merged_polygons
+	return merged_polygons
 
 
 func _clip_without_hole(polygon: Array, clip_polygon: Array):
@@ -99,7 +117,7 @@ func _clip_without_hole(polygon: Array, clip_polygon: Array):
 	return [left_polygon_clipped, right_polygon_clipped]
 
 
-func _split_quadrant(split_x: int):
+func _split_quadrant(split_x: int) -> Array:
 	"""
 	Returns a list of polygons as a result of
 	splitting default_quadrant_polygon vertically at split_x
@@ -113,21 +131,19 @@ func _split_quadrant(split_x: int):
 	return [left_subquadrant, right_subquadrant]
 
 
-func _is_hole(clipped_polygons):
+func _is_hole(polygons) -> bool:
 	"""
-	If either of the two polygons after clipping
-	are clockwise, then you have carved a hole
+	A hole was created if either polygon is clockwise.
 	"""
-	return len(clipped_polygons) == 2 and (
-			Geometry.is_polygon_clockwise(clipped_polygons[0]) or
-			Geometry.is_polygon_clockwise(clipped_polygons[1])
-		)
+	for polygon in polygons:
+		if Geometry.is_polygon_clockwise(polygon):
+			return true
+	return false
 
 
-func _avg_position(array: Array):
+func _avg_position(array: Array) -> Vector2:
 	"""
-	Average 2D position in an
-	array of positions
+	Returns the average 2D position in an array of points.
 	"""
 	var sum = Vector2()
 	for p in array:
