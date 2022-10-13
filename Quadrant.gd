@@ -21,7 +21,7 @@ func reset_quadrant():
 	and initiates the default ColPol
 	"""
 	for colpol in static_body.get_children():
-		colpol.free()
+		colpol.queue_free()
 	init_quadrant()
 
 
@@ -35,7 +35,7 @@ func carve(clipping_polygon: PoolVector2Array):
 		match n_clipped_polygons:
 			0:
 				# clipping_polygon completely overlaps colpol
-				colpol.free()
+				colpol.queue_free()
 			1:
 				# Clipping produces only one polygon
 				colpol.update_pol(clipped_polygons[0])
@@ -46,11 +46,38 @@ func carve(clipping_polygon: PoolVector2Array):
 					static_body.add_child(_new_colpol(clipped_polygons[i+1]))
 
 
-func add(_adding_polygon):
+func add(adding_polygon: PoolVector2Array):
 	"""
 	Adds the intersecting parts of `adding_polygon` to the quadrant
 	"""
-	pass
+	var intersected_adding_polygons = Geometry.intersect_polygons_2d(default_quadrant_polygon, adding_polygon)
+	if len(intersected_adding_polygons) == 0:
+		# adding_polygon is not within the quadrant
+		return
+	if _is_hole(intersected_adding_polygons):
+		# adding_polygon must be completely enclosed by the quadrant
+		intersected_adding_polygons = [adding_polygon]
+
+	# remove any existing polygons from the new one
+	for colpol in static_body.get_children():
+		# avoid changing intersected_adding_polygons during iteration
+		var new_intersected_adding_polygons = []
+		for intersected_adding_polygon in intersected_adding_polygons:
+			var clip_results = Geometry.clip_polygons_2d(intersected_adding_polygon, colpol.polygon)
+			if _is_hole(clip_results):
+				# the colpol must be contained in the adding_polygon
+				# clear the colpol and ignore the hole
+				colpol.queue_free()
+				for clip_result in clip_results:
+					if not Geometry.is_polygon_clockwise(clip_result):
+						new_intersected_adding_polygons.append(clip_result)
+				break
+			if len(clip_results) > 0:
+				new_intersected_adding_polygons.append_array(clip_results)
+		intersected_adding_polygons = new_intersected_adding_polygons
+	
+	for intersected_adding_polygon in intersected_adding_polygons:
+		static_body.add_child(_new_colpol(intersected_adding_polygon))
 
 
 func _clip_without_hole(polygon: Array, clip_polygon: Array):
@@ -59,10 +86,10 @@ func _clip_without_hole(polygon: Array, clip_polygon: Array):
 	splitting polygon in half and removing clip_polygon.
 	"""
 	var clipped_polygons = Geometry.clip_polygons_2d(polygon, clip_polygon)
-	if not (len(clipped_polygons) == 2 and _is_hole(clipped_polygons)):
+	if not _is_hole(clipped_polygons):
 		# no hole was created
 		return clipped_polygons
-	# split the quadrant at the polygons position avoids creating a hole
+	# split the quadrant at the polygons position to avoid creating a hole
 	var avg_x = _avg_position(clip_polygon).x
 	var subquadrants = _split_quadrant(avg_x)
 	var left_quadrant_clipped = Geometry.clip_polygons_2d(subquadrants[0], clip_polygon)[0]
@@ -91,7 +118,10 @@ func _is_hole(clipped_polygons):
 	If either of the two polygons after clipping
 	are clockwise, then you have carved a hole
 	"""
-	return Geometry.is_polygon_clockwise(clipped_polygons[0]) or Geometry.is_polygon_clockwise(clipped_polygons[1])
+	return len(clipped_polygons) == 2 and (
+			Geometry.is_polygon_clockwise(clipped_polygons[0]) or
+			Geometry.is_polygon_clockwise(clipped_polygons[1])
+		)
 
 
 func _avg_position(array: Array):
