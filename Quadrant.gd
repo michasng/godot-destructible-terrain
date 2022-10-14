@@ -97,6 +97,10 @@ func _merge_polygons(polygons_to_merge: Array) -> Array:
 					continue
 				
 				var merged = Geometry.merge_polygons_2d(unmerged_polygon, polygon)
+				merged = Polygons.resolve_polygon_holes(merged)	
+				# This doesn't work for multiple holes yet
+				# assert(not _is_hole(merged))
+				
 				match merged.size():
 					0:
 						# these two resolve each other completely
