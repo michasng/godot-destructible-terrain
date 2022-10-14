@@ -81,21 +81,41 @@ func _merge_polygons(polygons_to_merge: Array) -> Array:
 	# nothing to merge for 0 or 1 item(s)
 	if len(polygons_to_merge) < 2:
 		return polygons_to_merge
-	
-	var merged_polygons = [polygons_to_merge.front()]
-	# iterate over all subsequent items (start and end are both inclusive)
-	for polygon_to_merge in polygons_to_merge.slice(1, len(polygons_to_merge) - 1):
-		# don't modify Array during iteration
-		var modified_merged_polygons = []
-		for merged_polygon in merged_polygons:
-			var new_merged_polygons = Geometry.merge_polygons_2d(polygon_to_merge, merged_polygon)
-			if len(modified_merged_polygons) > 1:
-				# these two cannot be merged, or one contains the other
-				modified_merged_polygons.append(merged_polygon)
-			else:
-				modified_merged_polygons.append_array(new_merged_polygons)
-		merged_polygons = modified_merged_polygons
-	return merged_polygons
+
+	# current results
+	var polygons = polygons_to_merge.duplicate()
+	# temporary list for all polygons that have not been merged yet
+	var unmerged_polygons = polygons.duplicate()
+	while not unmerged_polygons.empty():
+		# loop backwards, so the arrays can be modified during iteration
+		for i in range(unmerged_polygons.size() - 1, -1, -1):
+			var unmerged_polygon = unmerged_polygons[i]
+			unmerged_polygons.remove(i)
+			for j in range(polygons.size() - 1, -1, -1):
+				var polygon = polygons[j]
+				if unmerged_polygon == polygon:
+					continue
+				
+				var merged = Geometry.merge_polygons_2d(unmerged_polygon, polygon)
+				match merged.size():
+					0:
+						# these two resolve each other completely
+						# go on to the next unmerged_polygon
+						break
+					1:
+						# merge successful
+						polygons.remove(j)
+						polygons.erase(unmerged_polygon)
+						polygons.append(merged[0])
+						# still need to merge the new polygon
+						unmerged_polygons.append(merged[0])
+						# now do the next unmerged_polygon
+						break
+					_:
+						# these two could not be merged into a single polygon
+						# continue as usual
+						pass
+	return polygons
 
 
 func _clip_without_hole(polygon: Array, clip_polygon: Array):
