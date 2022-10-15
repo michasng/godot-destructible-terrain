@@ -63,6 +63,9 @@ func add(adding_polygon: PoolVector2Array):
 		polygons.append(child.polygon)
 	polygons.append_array(intersected_adding_polygons)
 	polygons = Polygons.merge(polygons)
+	
+	assert(not Polygons.has_hole(polygons))
+	
 	_assign_polygons(polygons)
 
 
