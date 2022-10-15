@@ -12,9 +12,8 @@ static func resolve_holes(polygons: Array) -> Array:
 	var grouped_polygons = _group_for_holes(polygons)
 	for polygon_group in grouped_polygons:
 		var polygon = polygon_group["outer"]
-		for inner_polygon in polygon_group["inner"]:
-			# ToDo: There are still some issues depending on the order of the inner polygons,
-			# if e.g. the second inner is on the edge of the first inner to the outer
+		for inner_polygon in polygon_group["inners"]:
+			# rely on the fact that inners are sorted by distance, to prevent crossing edges
 			polygon = resolve_hole(polygon, inner_polygon)
 		results.append(polygon)
 	return results
@@ -153,39 +152,57 @@ static func has_hole(polygons: Array) -> bool:
 	return false
 
 
+class DistanceKeySorter:
+	static func sort_ascending(a, b):
+		if a["distance"] < b["distance"]:
+			return true
+		return false
+
+
 static func _group_for_holes(polygons: Array) -> Array:
 	"""
 	Returns an Array of a Dictionaries for each polygon (with or without holes).
-	Each Dictionary contains one outer polygon
-	and an array of inner (hole) polygons, that might be empty.
+	Each Dictionary contains one `outer` polygon
+	and an array of `inners` (hole) polygons, that might be empty.
+	Inner polygons are sorted by ascending distance to their outer polygon.
 	
 	Required, because the return values of the Geometry functions are unsorted.
 	"""
 	# group polygons
 	var outer = []
-	var inner = []
+	var inners = []
 	for polygon in polygons:
 		if Geometry.is_polygon_clockwise(polygon):
-			inner.append(polygon)
+			inners.append(polygon)
 		else:
 			outer.append(polygon)
 	
 	# match inner polygons to their outer counterparts
 	var results = []
 	for outer_polygon in outer:
-		var inner_of_outer = []
+		var inners_of_outer_with_distance = []
 		# loop backwards to modify the array during iteration
-		for inner_index in range(inner.size()-1, -1, -1):
-			var inner_polygon = inner[inner_index]
+		for inner_index in range(inners.size()-1, -1, -1):
+			var inner_polygon = inners[inner_index]
 			# an inner polygon belongs to an outer polygon,
 			# if any one of it's points is inside the outer polygon
 			if Geometry.is_point_in_polygon(inner_polygon[0], outer_polygon):
-				inner_of_outer.append(inner_polygon)
+				# find the connecting edge now, because inner_polygons need to be resolved in order
+				var connecting_edge_indexes = _find_closest_points(outer_polygon, inner_polygon)
+				var connecting_edge = [outer_polygon[connecting_edge_indexes[0]], inner_polygon[connecting_edge_indexes[1]]]
+				inners_of_outer_with_distance.append({
+					"inner_polygon": inner_polygon,
+					"distance": connecting_edge[0].distance_squared_to(connecting_edge[1]),
+				})
 				# each inner can only be inside a single outer polygon
-				inner.remove(inner_index)
+				inners.remove(inner_index)
+		inners_of_outer_with_distance.sort_custom(DistanceKeySorter, "sort_ascending")
+		var inners_of_outer = []
+		for inner_with_distance in inners_of_outer_with_distance:
+			inners_of_outer.append(inner_with_distance.inner_polygon)
 		results.append({
 			"outer": outer_polygon,
-			"inner": inner_of_outer,
+			"inners": inners_of_outer,
 		})
 	return results
 
