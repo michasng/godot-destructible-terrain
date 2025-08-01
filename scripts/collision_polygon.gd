@@ -1,4 +1,4 @@
-class_name ColPol
+class_name CollisionPolygon
 extends CollisionPolygon2D
 
 @onready var visual_polygon: Polygon2D = $Polygon2D

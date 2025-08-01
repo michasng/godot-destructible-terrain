@@ -1,9 +1,9 @@
 [gd_scene load_steps=2 format=3 uid="uid://cp4sdeegjfxys"]
 
-[ext_resource type="Script" uid="uid://d3jmrnqv0fboj" path="res://Main.gd" id="1"]
+[ext_resource type="Script" uid="uid://d3jmrnqv0fboj" path="res://scripts/main.gd" id="1_o5qli"]
 
 [node name="Main" type="Node2D"]
-script = ExtResource("1")
+script = ExtResource("1_o5qli")
 
 [node name="Quadrants" type="Node2D" parent="."]
 

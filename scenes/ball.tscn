@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3 uid="uid://c6sc7mfre651t"]
 
-[ext_resource type="Texture2D" uid="uid://sd4omslyyjd3" path="res://rigid_sprite.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://sd4omslyyjd3" path="res://textures/ball.png" id="1"]
 
 [sub_resource type="PhysicsMaterial" id="1"]
 friction = 0.76

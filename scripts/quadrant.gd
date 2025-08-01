@@ -3,7 +3,7 @@ extends Node2D
 
 var default_quadrant_polygon: PackedVector2Array = []
 @onready var static_body: StaticBody2D = $StaticBody2D
-@onready var ColPolScene: PackedScene = preload("res://ColPol.tscn")
+@onready var CollisionPolygonScene: PackedScene = preload("res://scenes/collision_polygon.tscn")
 
 
 func _ready() -> void:
@@ -79,7 +79,7 @@ func _assign_polygons(polygons: Array[PackedVector2Array]) -> void:
 		static_body.add_child(colpol) # sometimes throws "Convex decomposing failed"
 
 
-func _new_colpol(polygon: PackedVector2Array) -> ColPol:
-	var colpol: ColPol = ColPolScene.instantiate()
-	colpol.polygon = polygon
-	return colpol
+func _new_colpol(polygon: PackedVector2Array) -> CollisionPolygon:
+	var collision_polygon: CollisionPolygon = CollisionPolygonScene.instantiate()
+	collision_polygon.polygon = polygon
+	return collision_polygon

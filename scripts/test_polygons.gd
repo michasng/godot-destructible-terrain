@@ -1,3 +1,4 @@
+class_name TestPolygons
 extends Node
 
 func _ready():
@@ -29,4 +30,3 @@ func _test_resolve_holes():
 	var result = Polygons.resolve_holes([outer, inner2, inner1])
 	print(result)
 	$Polygon2D.polygon = result[0]
-

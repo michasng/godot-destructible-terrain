@@ -11,13 +11,21 @@ config_version=5
 [application]
 
 config/name="Destructible terrain"
-run/main_scene="res://Main.tscn"
+run/main_scene="uid://cp4sdeegjfxys"
 config/features=PackedStringArray("4.4")
 config/icon="res://icon.png"
 
 [display]
 
 window/size/viewport_width=1000
+
+[file_customization]
+
+folder_colors={
+"res://scenes/": "blue",
+"res://scripts/": "purple",
+"res://textures/": "orange"
+}
 
 [input]
 
@@ -35,7 +43,3 @@ click_right={
 [physics]
 
 common/enable_pause_aware_picking=true
-
-[rendering]
-
-environment/defaults/default_environment="res://default_env.tres"

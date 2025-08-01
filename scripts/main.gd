@@ -13,38 +13,17 @@ var mouse_pos := Vector2.ZERO
 
 var quadrants_grid: Array[Array] = [] # Array[Array[Quadrant]]
 
+@onready var quadrants: Node2D = $Quadrants
 @onready var carve_area: Polygon2D = $CarveArea
-var QuadrantScene: PackedScene = preload("res://Quadrant.tscn")
-var Rigid: PackedScene = preload("res://RigidBody.tscn")
+@onready var rigid_bodies: Node2D = $RigidBodies
+
+var QuadrantScene: PackedScene = preload("res://scenes/quadrant.tscn")
+var Ball: PackedScene = preload("res://scenes/ball.tscn")
 
 
 func _ready():
 	_spawn_quadrants()
 	_make_mouse_circle()
-
-
-func _process(_delta):
-	if Input.is_action_pressed("click_left"):
-		if old_mouse_pos.distance_to(mouse_pos) > min_movement_update:
-			_carve()
-			old_mouse_pos = mouse_pos
-	
-	elif Input.is_action_pressed("click_right"):
-		if old_mouse_pos.distance_to(mouse_pos) > min_movement_update:
-			_add()
-			old_mouse_pos = mouse_pos
-	
-	if Input.is_action_pressed("ui_accept"):
-		var rigid = Rigid.instantiate()
-		rigid.position = get_global_mouse_position() + Vector2(randi()%10,0)
-		$RigidBodies.add_child(rigid)
-
-
-func _input(event):
-	if event is InputEventMouseMotion:
-		mouse_pos = get_global_mouse_position()
-		carve_area.position = mouse_pos
-		# update()
 
 
 func _spawn_quadrants():
@@ -59,7 +38,7 @@ func _spawn_quadrants():
 				Vector2(quadrant_size*i,quadrant_size*(j+1))
 			]
 			quadrants_grid[-1].push_back(quadrant)
-			$Quadrants.add_child(quadrant)
+			quadrants.add_child(quadrant)
 
 
 func _make_mouse_circle():
@@ -69,6 +48,29 @@ func _make_mouse_circle():
 		var angle = lerp(-PI, PI, float(i)/nb_points)
 		pol.push_back(mouse_pos + Vector2(cos(angle), sin(angle)) * carve_radius)
 	carve_area.polygon = pol
+
+
+func _process(_delta):
+	if Input.is_action_pressed("click_left"):
+		if old_mouse_pos.distance_to(mouse_pos) > min_movement_update:
+			_carve()
+			old_mouse_pos = mouse_pos
+	
+	elif Input.is_action_pressed("click_right"):
+		if old_mouse_pos.distance_to(mouse_pos) > min_movement_update:
+			_add()
+			old_mouse_pos = mouse_pos
+	
+	if Input.is_action_pressed("ui_accept"):
+		var ball: Node2D = Ball.instantiate()
+		ball.position = get_global_mouse_position() + Vector2(randi()%10,0)
+		rigid_bodies.add_child(ball)
+
+
+func _input(event):
+	if event is InputEventMouseMotion:
+		mouse_pos = get_global_mouse_position()
+		carve_area.position = mouse_pos
 
 
 func _carve():
