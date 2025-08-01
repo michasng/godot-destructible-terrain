@@ -5,9 +5,9 @@
 [node name="Main" type="Node2D"]
 script = ExtResource("1_o5qli")
 
-[node name="Quadrants" type="Node2D" parent="."]
+[node name="Chunks" type="Node2D" parent="."]
 
-[node name="CarveArea" type="Polygon2D" parent="."]
+[node name="BrushArea" type="Polygon2D" parent="."]
 color = Color(1, 0.635294, 0.635294, 0.784314)
 
 [node name="RigidBodies" type="Node2D" parent="."]

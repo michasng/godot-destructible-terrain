@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://ba243bdc80rps"]
+
+[ext_resource type="Script" uid="uid://l748q5say2jq" path="res://scripts/chunk_polygon.gd" id="1_ohicr"]
+[ext_resource type="Texture2D" uid="uid://b0qpm3o76ej0x" path="res://textures/texture.png" id="2_86in6"]
+
+[node name="ChunkPolygon" type="CollisionPolygon2D"]
+script = ExtResource("1_ohicr")
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+visible = false
+texture = ExtResource("2_86in6")
