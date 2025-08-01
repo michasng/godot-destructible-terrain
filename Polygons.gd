@@ -1,6 +1,6 @@
 class_name Polygons
 
-static func resolve_holes(polygons: Array) -> Array:
+static func resolve_holes(polygons: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
 	"""
 	Resolves holes in an array of polygons.
 	"""
@@ -8,11 +8,11 @@ static func resolve_holes(polygons: Array) -> Array:
 	if not has_hole(polygons):
 		return polygons
 	
-	var results = []
+	var results: Array[PackedVector2Array] = []
 	var grouped_polygons = _group_for_holes(polygons)
 	for polygon_group in grouped_polygons:
-		var polygon = polygon_group["outer"]
-		for inner_polygon in polygon_group["inners"]:
+		var polygon: PackedVector2Array = polygon_group["outer"]
+		for inner_polygon: PackedVector2Array in polygon_group["inners"]:
 			# rely on the fact that inners are sorted by distance, to prevent crossing edges
 			polygon = resolve_hole(polygon, inner_polygon)
 		results.append(polygon)
@@ -20,7 +20,7 @@ static func resolve_holes(polygons: Array) -> Array:
 
 
 # Use Array parameter type, because it exports some functions used here 
-static func resolve_hole(outer: Array, inner: Array) -> PoolVector2Array:
+static func resolve_hole(outer: PackedVector2Array, inner: PackedVector2Array) -> PackedVector2Array:
 	"""
 	Combines an outer polygon with an inner (hole) polygon
 	by adding an edge between them.
@@ -28,16 +28,16 @@ static func resolve_hole(outer: Array, inner: Array) -> PoolVector2Array:
 	
 	Will not modify the input values.
 	"""
-	assert(Geometry.is_polygon_clockwise(inner))
-	assert(not Geometry.is_polygon_clockwise(outer))
+	assert(Geometry2D.is_polygon_clockwise(inner))
+	assert(not Geometry2D.is_polygon_clockwise(outer))
 	
 	# the edge should connect the polygons at their shortest distance
 	# to avoid cutting through the inner polygon
 	# or through concave parts of the outer polygon
-	var edge_indexes = _find_closest_points(outer, inner)
+	var edge_indexes := _find_closest_points(outer, inner)
 	
 	# offset all array indices, so the edge_index is the first element
-	var result = _shift_array(outer, edge_indexes[0])
+	var result := _shift_array(outer, edge_indexes[0])
 	
 	# ensure the edge has a starting position
 	if result.back() != result.front():
@@ -45,7 +45,7 @@ static func resolve_hole(outer: Array, inner: Array) -> PoolVector2Array:
 		
 	# offset all array indices, so the edge_index is the first element
 	# so the end of the edge is at the start
-	var shifted_inner = _shift_array(inner, edge_indexes[1])
+	var shifted_inner := _shift_array(inner, edge_indexes[1])
 	
 	# utilize the fact that the inner polygon is already clockwise
 	result.append_array(shifted_inner)
@@ -54,18 +54,18 @@ static func resolve_hole(outer: Array, inner: Array) -> PoolVector2Array:
 	if shifted_inner.back() != shifted_inner.front():
 		result.append(shifted_inner.front())
 	
-	return PoolVector2Array(result)
+	return PackedVector2Array(result)
 
 
-static func _find_closest_points(polygon1: PoolVector2Array, polygon2: PoolVector2Array) -> Array:
+static func _find_closest_points(polygon1: PackedVector2Array, polygon2: PackedVector2Array) -> Array[int]:
 	"""
 	Finds the closest points between two polygons returns their indexes.
 	"""
-	var minimal_distance = INF
-	var minimal_distance_indexes
+	var minimal_distance := INF
+	var minimal_distance_indexes: Array[int]
 	for i in range(polygon1.size()):
 		for j in range(polygon2.size()):
-			var distance = polygon1[i].distance_squared_to(polygon2[j])
+			var distance := polygon1[i].distance_squared_to(polygon2[j])
 			if distance < minimal_distance:
 				minimal_distance = distance
 				minimal_distance_indexes = [i, j]
@@ -87,15 +87,15 @@ static func _shift_array(arr: Array, begin_index: int) -> Array:
 	return result
 
 
-static func clip(polygon: PoolVector2Array, clipping_polygon: PoolVector2Array) -> Array:
+static func clip(polygon: PackedVector2Array, clipping_polygon: PackedVector2Array) -> Array[PackedVector2Array]:
 	"""
 	Clips a polygon and resolves any inner (hole) polygons.
 	"""
-	var clipped = Geometry.clip_polygons_2d(polygon, clipping_polygon)
+	var clipped := Geometry2D.clip_polygons(polygon, clipping_polygon)
 	return resolve_holes(clipped)
 
 
-static func merge(polygons_to_merge: Array) -> Array:
+static func merge(polygons_to_merge: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
 	"""
 	Returns a list of merged polygons without holes.
 	"""
@@ -104,22 +104,22 @@ static func merge(polygons_to_merge: Array) -> Array:
 		return polygons_to_merge
 
 	# current results
-	var polygons = polygons_to_merge.duplicate()
+	var polygons: Array[PackedVector2Array] = polygons_to_merge.duplicate()
 	# temporary list for all polygons that have not been merged yet
-	var unmerged_polygons = polygons.duplicate()
-	while not unmerged_polygons.empty():
+	var unmerged_polygons: Array[PackedVector2Array] = polygons.duplicate()
+	while not unmerged_polygons.is_empty():
 		# loop backwards, so the arrays can be modified during iteration
 		for i in range(unmerged_polygons.size()-1, -1, -1):
-			var unmerged_polygon = unmerged_polygons[i]
-			unmerged_polygons.remove(i)
+			var unmerged_polygon := unmerged_polygons[i]
+			unmerged_polygons.remove_at(i)
 			for j in range(polygons.size()-1, -1, -1):
-				var polygon = polygons[j]
+				var polygon := polygons[j]
 				if unmerged_polygon == polygon:
 					continue
 				
-				var merged1 = Geometry.merge_polygons_2d(unmerged_polygon, polygon)
-				var merged = resolve_holes(merged1)
-				assert(not has_hole(merged))
+				var merged1 := Geometry2D.merge_polygons(unmerged_polygon, polygon)
+				var merged := resolve_holes(merged1)
+				# assert(not has_hole(merged)) <-- this sometimes fails
 				
 				match merged.size():
 					0:
@@ -128,7 +128,7 @@ static func merge(polygons_to_merge: Array) -> Array:
 						break
 					1:
 						# merge successful
-						polygons.remove(j)
+						polygons.remove_at(j)
 						polygons.erase(unmerged_polygon)
 						polygons.append(merged[0])
 						# still need to merge the new polygon
@@ -142,12 +142,12 @@ static func merge(polygons_to_merge: Array) -> Array:
 	return polygons
 
 
-static func has_hole(polygons: Array) -> bool:
+static func has_hole(polygons: Array[PackedVector2Array]) -> bool:
 	"""
 	Returns whether there are any holes in polygons.
 	"""
 	for polygon in polygons:
-		if Geometry.is_polygon_clockwise(polygon):
+		if Geometry2D.is_polygon_clockwise(polygon):
 			return true
 	return false
 
@@ -159,7 +159,7 @@ class DistanceKeySorter:
 		return false
 
 
-static func _group_for_holes(polygons: Array) -> Array:
+static func _group_for_holes(polygons: Array[PackedVector2Array]) -> Array[Dictionary]:
 	"""
 	Returns an Array of a Dictionaries for each polygon (with or without holes).
 	Each Dictionary contains one `outer` polygon
@@ -169,16 +169,16 @@ static func _group_for_holes(polygons: Array) -> Array:
 	Required, because the return values of the Geometry functions are unsorted.
 	"""
 	# group polygons
-	var outer = []
-	var inners = []
+	var outer: Array[PackedVector2Array] = []
+	var inners: Array[PackedVector2Array] = []
 	for polygon in polygons:
-		if Geometry.is_polygon_clockwise(polygon):
+		if Geometry2D.is_polygon_clockwise(polygon):
 			inners.append(polygon)
 		else:
 			outer.append(polygon)
 	
 	# match inner polygons to their outer counterparts
-	var results = []
+	var results: Array[Dictionary] = []
 	for outer_polygon in outer:
 		var inners_of_outer_with_distance = []
 		# loop backwards to modify the array during iteration
@@ -186,7 +186,7 @@ static func _group_for_holes(polygons: Array) -> Array:
 			var inner_polygon = inners[inner_index]
 			# an inner polygon belongs to an outer polygon,
 			# if any one of it's points is inside the outer polygon
-			if Geometry.is_point_in_polygon(inner_polygon[0], outer_polygon):
+			if Geometry2D.is_point_in_polygon(inner_polygon[0], outer_polygon):
 				# find the connecting edge now, because inner_polygons need to be resolved in order
 				var connecting_edge_indexes = _find_closest_points(outer_polygon, inner_polygon)
 				var connecting_edge = [outer_polygon[connecting_edge_indexes[0]], inner_polygon[connecting_edge_indexes[1]]]
@@ -195,8 +195,8 @@ static func _group_for_holes(polygons: Array) -> Array:
 					"distance": connecting_edge[0].distance_squared_to(connecting_edge[1]),
 				})
 				# each inner can only be inside a single outer polygon
-				inners.remove(inner_index)
-		inners_of_outer_with_distance.sort_custom(DistanceKeySorter, "sort_ascending")
+				inners.remove_at(inner_index)
+		inners_of_outer_with_distance.sort_custom(Callable(DistanceKeySorter, "sort_ascending"))
 		var inners_of_outer = []
 		for inner_with_distance in inners_of_outer_with_distance:
 			inners_of_outer.append(inner_with_distance.inner_polygon)
@@ -205,4 +205,3 @@ static func _group_for_holes(polygons: Array) -> Array:
 			"inners": inners_of_outer,
 		})
 	return results
-

@@ -1,10 +1,11 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=3 format=3 uid="uid://ba243bdc80rps"]
 
-[ext_resource path="res://texture.png" type="Texture" id=1]
-[ext_resource path="res://ColPol.gd" type="Script" id=2]
+[ext_resource type="Texture2D" uid="uid://b0qpm3o76ej0x" path="res://texture.png" id="1"]
+[ext_resource type="Script" uid="uid://l748q5say2jq" path="res://ColPol.gd" id="2"]
 
 [node name="ColPol" type="CollisionPolygon2D"]
-script = ExtResource( 2 )
+script = ExtResource("2")
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
-texture = ExtResource( 1 )
+visible = false
+texture = ExtResource("1")

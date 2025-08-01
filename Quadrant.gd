@@ -1,21 +1,23 @@
+class_name Quadrant
 extends Node2D
 
-var default_quadrant_polygon: Array = []
-onready var static_body = $StaticBody2D
-onready var ColPol = preload("res://ColPol.tscn")
+var default_quadrant_polygon: PackedVector2Array = []
+@onready var static_body: StaticBody2D = $StaticBody2D
+@onready var ColPolScene: PackedScene = preload("res://ColPol.tscn")
 
-func _ready():
+
+func _ready() -> void:
 	init_quadrant()
 
 
-func init_quadrant():
+func init_quadrant() -> void:
 	"""
 	Initiates the default (square) ColPol
 	"""
 	static_body.add_child(_new_colpol(default_quadrant_polygon))
 
 
-func reset_quadrant():
+func reset_quadrant() -> void:
 	"""
 	Removes all collision polygons
 	and initiates the default ColPol
@@ -25,12 +27,12 @@ func reset_quadrant():
 	init_quadrant()
 
 
-func carve(clipping_polygon: PoolVector2Array):
+func carve(clipping_polygon: PackedVector2Array) -> void:
 	"""
 	Carves `clipping_polygon` away from the quadrant
 	"""
 	for colpol in static_body.get_children():
-		var clipped_polygons = Polygons.clip(colpol.polygon, clipping_polygon)
+		var clipped_polygons := Polygons.clip(colpol.polygon, clipping_polygon)
 		
 		match clipped_polygons.size():
 			0:
@@ -46,11 +48,11 @@ func carve(clipping_polygon: PoolVector2Array):
 					static_body.add_child(_new_colpol(clipped_polygons[i + 1]))
 
 
-func add(adding_polygon: PoolVector2Array):
+func add(adding_polygon: PackedVector2Array) -> void:
 	"""
 	Adds the intersecting parts of `adding_polygon` to the quadrant
 	"""
-	var intersected_adding_polygons = Geometry.intersect_polygons_2d(default_quadrant_polygon, adding_polygon)
+	var intersected_adding_polygons := Geometry2D.intersect_polygons(default_quadrant_polygon, adding_polygon)
 	if len(intersected_adding_polygons) == 0:
 		# adding_polygon is not within the quadrant
 		return
@@ -58,7 +60,7 @@ func add(adding_polygon: PoolVector2Array):
 		# adding_polygon must be completely enclosed by the quadrant
 		intersected_adding_polygons = [adding_polygon]
 
-	var polygons = []
+	var polygons: Array[PackedVector2Array] = []
 	for child in static_body.get_children():
 		polygons.append(child.polygon)
 	polygons.append_array(intersected_adding_polygons)
@@ -69,19 +71,15 @@ func add(adding_polygon: PoolVector2Array):
 	_assign_polygons(polygons)
 
 
-func _assign_polygons(polygons: Array):
+func _assign_polygons(polygons: Array[PackedVector2Array]) -> void:
 	for child in static_body.get_children():
 		child.queue_free()
 	for polygon in polygons:
-		static_body.add_child(_new_colpol(polygon))
+		var colpol = _new_colpol(polygon)
+		static_body.add_child(colpol) # sometimes throws "Convex decomposing failed"
 
 
-func _new_colpol(polygon):
-	"""
-	Returns ColPol instance
-	with assigned polygon
-	"""
-	var colpol = ColPol.instance()
+func _new_colpol(polygon: PackedVector2Array) -> ColPol:
+	var colpol: ColPol = ColPolScene.instantiate()
 	colpol.polygon = polygon
 	return colpol
-

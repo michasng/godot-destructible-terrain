@@ -1,8 +1,13 @@
+class_name ColPol
 extends CollisionPolygon2D
 
-func _ready():
-	$Polygon2D.polygon = polygon
+@onready var visual_polygon: Polygon2D = $Polygon2D
 
-func update_pol(polygon_points):
+
+func _ready() -> void:
+	visual_polygon.polygon = polygon
+
+
+func update_pol(polygon_points: PackedVector2Array) -> void:
 	polygon = polygon_points
-	$Polygon2D.polygon = polygon
+	visual_polygon.polygon = polygon
