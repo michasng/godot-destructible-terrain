@@ -10,49 +10,36 @@ static func clip(polygon_to_clip: PackedVector2Array, clipping_polygon: PackedVe
 
 
 static func merge(polygons_to_merge: Array[PackedVector2Array]) -> Array[PackedVector2Array]:
-	"""
-	Returns a list of merged polygons without holes.
-	"""
-	# nothing to merge for 0 or 1 item(s)
-	if len(polygons_to_merge) < 2:
+	if polygons_to_merge.size() <= 1:
 		return polygons_to_merge
 
-	# current results
 	var polygons: Array[PackedVector2Array] = polygons_to_merge.duplicate()
-	# temporary list for all polygons that have not been merged yet
-	var unmerged_polygons: Array[PackedVector2Array] = polygons.duplicate()
-	while not unmerged_polygons.is_empty():
-		# loop backwards, so the arrays can be modified during iteration
-		for i in range(unmerged_polygons.size()-1, -1, -1):
-			var unmerged_polygon := unmerged_polygons[i]
-			unmerged_polygons.remove_at(i)
-			for j in range(polygons.size()-1, -1, -1):
-				var polygon := polygons[j]
-				if unmerged_polygon == polygon:
+	while true:
+		var has_merged_in_pass: bool = false
+		
+		for i in polygons.size():
+			for j in range(i + 1, polygons.size()):
+				var intersection = Geometry2D.intersect_polygons(polygons[i], polygons[j])
+				if intersection.is_empty():
 					continue
+
+				var merged_polygons := Geometry2D.merge_polygons(polygons[i], polygons[j])
+				if has_hole(merged_polygons):
+					merged_polygons = resolve_holes(merged_polygons)
 				
-				var merged1 := Geometry2D.merge_polygons(unmerged_polygon, polygon)
-				var merged := resolve_holes(merged1)
-				assert(not has_hole(merged))
+				polygons.remove_at(j)
+				polygons.remove_at(i)
+				polygons.append_array(merged_polygons)
 				
-				match merged.size():
-					0:
-						# these two resolve each other completely
-						# go on to the next unmerged_polygon
-						break
-					1:
-						# merge successful
-						polygons.remove_at(j)
-						polygons.erase(unmerged_polygon)
-						polygons.append(merged[0])
-						# still need to merge the new polygon
-						unmerged_polygons.append(merged[0])
-						# now do the next unmerged_polygon
-						break
-					_:
-						# these two could not be merged into a single polygon
-						# continue as usual
-						pass
+				has_merged_in_pass = true
+				break
+			
+			if has_merged_in_pass:
+				break
+		
+		if not has_merged_in_pass:
+			break
+
 	return polygons
 
 

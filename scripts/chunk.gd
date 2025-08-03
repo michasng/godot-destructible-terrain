@@ -40,22 +40,22 @@ func carve(clipping_polygon: PackedVector2Array) -> void:
 
 func add(adding_polygon: PackedVector2Array) -> void:
 	"""
-	Adds the intersecting parts of `adding_polygon` to the chunk
+	Adds the chunk-intersecting parts of `adding_polygon` to the chunk
 	"""
 	var intersected_adding_polygons := Geometry2D.intersect_polygons(default_polygon, adding_polygon)
 	if len(intersected_adding_polygons) == 0:
 		# adding_polygon is not within the chunk
 		return
-	if Polygons.has_hole(intersected_adding_polygons):
-		# adding_polygon must be completely enclosed by the chunk
-		intersected_adding_polygons = [adding_polygon]
+
+	# could only occur if adding_polygon itself had a hole, which is unsupported
+	assert(not Polygons.has_hole(intersected_adding_polygons))
 
 	var polygons: Array[PackedVector2Array] = []
-	for child in static_body.get_children():
+	for child: ChunkPolygon in static_body.get_children():
 		polygons.append(child.polygon)
 	polygons.append_array(intersected_adding_polygons)
+
 	polygons = Polygons.merge(polygons)
-	
 	assert(not Polygons.has_hole(polygons))
 	
 	_assign_polygons(polygons)
